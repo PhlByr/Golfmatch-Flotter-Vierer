@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Flotter Vierer Champion</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#0b3d2e;
+color:white;
+text-align:center;
+padding:10px;
+}
+
+.logo{
+width:220px;
+margin-bottom:10px;
+}
+
+.card{
+background:#145a32;
+padding:18px;
+margin:12px;
+border-radius:12px;
+}
+
+button{
+font-size:20px;
+padding:12px;
+margin:5px;
+border:none;
+border-radius:8px;
+background:#2ecc71;
+color:white;
+}
+
+.score{
+font-size:44px;
+margin:10px;
+}
+
+input{
+font-size:18px;
+padding:5px;
+width:90px;
+margin:5px;
+}
+
+table{
+width:100%;
+color:white;
+}
+
+td{
+padding:4px;
+font-size:14px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<img src="logo.png" class="logo">
+
+<h2>Texas Scramble Match</h2>
+
+<div class="card" id="setup">
+
+Team A Name<br>
+<input id="teamA" placeholder="Team A"><br>
+
+Team B Name<br>
+<input id="teamB" placeholder="Team B"><br><br>
+
+Spieler HC<br>
+
+<input id="h1" type="number">
+<input id="h2" type="number">
+<input id="h3" type="number">
+<input id="h4" type="number"><br><br>
+
+<button onclick="start()">Runde starten</button>
+
+</div>
+
+<div id="game" style="display:none">
+
+<div class="card">
+
+<h2 id="holeTitle"></h2>
+
+Par<br>
+<input id="par" type="number"><br>
+
+Stroke Index<br>
+<input id="si" type="number">
+
+</div>
+
+<div class="card">
+
+<h2 id="teamATitle"></h2>
+
+<button onclick="changeScore('A',-1)">-</button>
+
+<span class="score" id="scoreA">0</span>
+
+<button onclick="changeScore('A',1)">+</button>
+
+</div>
+
+<div class="card">
+
+<h2 id="teamBTitle"></h2>
+
+<button onclick="changeScore('B',-1)">-</button>
+
+<span class="score" id="scoreB">0</span>
+
+<button onclick="changeScore('B',1)">+</button>
+
+</div>
+
+<div class="card">
+
+Stableford Netto<br>
+
+<span id="stabA"></span><br>
+<span id="stabB"></span>
+
+</div>
+
+<div class="card">
+
+Matchstand
+
+<h2 id="match">All Square</h2>
+
+</div>
+
+<div class="card">
+
+<h3>Scorekarte</h3>
+
+<table id="scoreTable"></table>
+
+</div>
+
+<button onclick="saveHole()">Loch speichern</button>
+
+<button onclick="prevHole()">←</button>
+
+<button onclick="nextHole()">→</button>
+
+</div>
+
+<script>
+
+let hole=1
+
+let teamHC={}
+let teamNames={}
+
+let scoresA=Array(18).fill(null)
+let scoresB=Array(18).fill(null)
+let pars=Array(18).fill(null)
+let index=Array(18).fill(null)
+
+function start(){
+
+teamNames.A=document.getElementById("teamA").value||"Team A"
+teamNames.B=document.getElementById("teamB").value||"Team B"
+
+document.getElementById("teamATitle").innerText=teamNames.A
+document.getElementById("teamBTitle").innerText=teamNames.B
+
+let h1=parseFloat(document.getElementById("h1").value)
+let h2=parseFloat(document.getElementById("h2").value)
+let h3=parseFloat(document.getElementById("h3").value)
+let h4=parseFloat(document.getElementById("h4").value)
+
+teamHC.A=(h1+h2)/2
+teamHC.B=(h3+h4)/2
+
+document.getElementById("setup").style.display="none"
+document.getElementById("game").style.display="block"
+
+loadHole()
+
+}
+
+function handicapStroke(team,index){
+
+let hc=teamHC[team]
+
+if(index<=hc)return 1
+
+return 0
+
+}
+
+function stableford(score,par){
+
+let diff=score-par
+
+if(diff<=-3)return 5
+if(diff==-2)return 4
+if(diff==-1)return 3
+if(diff==0)return 2
+if(diff==1)return 1
+
+return 0
+
+}
+
+function loadHole(){
+
+document.getElementById("holeTitle").innerText="Loch "+hole
+
+document.getElementById("scoreA").innerText=scoresA[hole-1]||0
+document.getElementById("scoreB").innerText=scoresB[hole-1]||0
+
+document.getElementById("par").value=pars[hole-1]||""
+document.getElementById("si").value=index[hole-1]||""
+
+updateScorecard()
+
+}
+
+function changeScore(team,val){
+
+if(team=="A"){
+
+let v=(scoresA[hole-1]||0)+val
+if(v<1)v=1
+scoresA[hole-1]=v
+
+document.getElementById("scoreA").innerText=v
+
+}
+
+if(team=="B"){
+
+let v=(scoresB[hole-1]||0)+val
+if(v<1)v=1
+scoresB[hole-1]=v
+
+document.getElementById("scoreB").innerText=v
+
+}
+
+}
+
+function saveHole(){
+
+pars[hole-1]=parseInt(document.getElementById("par").value)
+index[hole-1]=parseInt(document.getElementById("si").value)
+
+let sA=scoresA[hole-1]
+let sB=scoresB[hole-1]
+
+let strokesA=handicapStroke("A",index[hole-1])
+let strokesB=handicapStroke("B",index[hole-1])
+
+let netA=sA-strokesA
+let netB=sB-strokesB
+
+let stabA=stableford(netA,pars[hole-1])
+let stabB=stableford(netB,pars[hole-1])
+
+document.getElementById("stabA").innerText=
+teamNames.A+" "+stabA+" Punkte"
+
+document.getElementById("stabB").innerText=
+teamNames.B+" "+stabB+" Punkte"
+
+updateMatch()
+
+updateScorecard()
+
+}
+
+function updateMatch(){
+
+let a=0
+let b=0
+let played=0
+
+for(let i=0;i<18;i++){
+
+if(scoresA[i]&&scoresB[i]){
+
+played++
+
+if(scoresA[i]<scoresB[i])a++
+if(scoresB[i]<scoresA[i])b++
+
+}
+
+}
+
+let diff=a-b
+let remain=18-played
+
+let text="All Square"
+
+if(diff>0)text=teamNames.A+" "+diff+" auf"
+if(diff<0)text=teamNames.B+" "+Math.abs(diff)+" auf"
+
+if(Math.abs(diff)>remain){
+
+let win=Math.abs(diff)
+
+text=(diff>0?teamNames.A:teamNames.B)+
+" gewinnt "+win+"&"+remain
+
+}
+
+document.getElementById("match").innerText=text
+
+}
+
+function updateScorecard(){
+
+let html="<tr><td>Loch</td><td>A</td><td>B</td></tr>"
+
+for(let i=0;i<18;i++){
+
+html+=`
+<tr>
+<td>${i+1}</td>
+<td>${scoresA[i]||""}</td>
+<td>${scoresB[i]||""}</td>
+</tr>
+`
+
+}
+
+document.getElementById("scoreTable").innerHTML=html
+
+}
+
+function nextHole(){
+
+if(hole<18){
+
+hole++
+loadHole()
+
+}
+
+}
+
+function prevHole(){
+
+if(hole>1){
+
+hole--
+loadHole()
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
+
